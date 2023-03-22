@@ -74,6 +74,8 @@ namespace netcall
                 return false;
             }
 
+            Console.WriteLine("Created space at 0x{0:x2}", stubspace);
+
             foreach (var stub in ImportedAPIs)
                 CopyStub(stubspace, stub);
 
@@ -141,13 +143,10 @@ namespace netcall
 
         private IntPtr CopyStub(IntPtr space, NtApi api)
         {
-            if (Environment.Is64BitOperatingSystem && !Environment.Is64BitProcess)
-            {
-                // wow64
-                // fix edx
+            bool requiresEdxFix = Environment.Is64BitOperatingSystem
+                && !Environment.Is64BitProcess;
 
-                CopyMemory(space, api.Address, api.Size, true);
-            }
+            CopyMemory(space, api.Address, api.Size, requiresEdxFix);
 
             return IntPtr.Zero;
         }
@@ -165,7 +164,7 @@ namespace netcall
 
             fixed (void* p = payload)
             {
-                bool x = Win32API.VirtualProtectEx(
+                Win32API.VirtualProtectEx(
                     -1,
                     (nint)p,
                     (uint)payload.Length,
