@@ -16,7 +16,7 @@ namespace netcall.Win32
         public static extern IntPtr CreateFileMapping(
             IntPtr hFile,
             IntPtr lpFileMappingAttributes,
-            Win32PageProtectionFlags flProtect, 
+            MemoryProtection flProtect, 
             uint dwMaximumSizeHigh,
             uint dwMaximumSizeLow, 
             string lpName
@@ -60,8 +60,8 @@ namespace netcall.Win32
             IntPtr hProcess,
             IntPtr lpAddress,
             UIntPtr dwSize,
-            Win32PageProtectionFlags flNewProtect,
-            out Win32PageProtectionFlags lpflOldProtect
+            MemoryProtection flNewProtect,
+            out MemoryProtection lpflOldProtect
         );
     }
 }

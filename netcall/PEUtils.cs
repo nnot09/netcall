@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.IO;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Globalization;
 
 namespace netcall
 {
@@ -154,6 +155,30 @@ namespace netcall
 
             if (opcode == 0xC2) // ret IMM16
                 end += 2;
+
+            if ( !Environment.Is64BitOperatingSystem )
+            {
+                // scan & fix length KiFastSystemCall
+
+                byte[] nextData = new byte[5];
+
+                Marshal.Copy(end + 1, nextData, 0, 5);
+
+                for ( int i = 0; i < nextData.Length; i++ )
+                {
+                    // sysenter
+                    // retn
+                    if (nextData[i] == 0x0F && nextData[i + 1] == 0x34 
+                        && nextData[i + 2] == 0xC3)
+                    {
+                        for (int fix = 0; nextData[fix] != 0xC3; fix++)
+                            end++;
+
+                        end += 2;
+                        break;
+                    }
+                }
+            }
 
             return (int)(end - start);
         }

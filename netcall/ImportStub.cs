@@ -101,7 +101,7 @@ namespace netcall
             nint hMap = Win32API.CreateFileMapping(
                 sf.DangerousGetHandle(),
                 nint.Zero,
-                Win32PageProtectionFlags.PAGE_READONLY,
+                MemoryProtection.ReadOnly,
                 0,
                 0,
                 null
@@ -163,13 +163,13 @@ namespace netcall
                 0xC3                                // ret
             };
 
-            fixed (void *p = payload)
+            fixed (void* p = payload)
             {
                 bool x = Win32API.VirtualProtectEx(
-                    -1, 
-                    (nint)p, 
-                    (uint)payload.Length, 
-                    Win32PageProtectionFlags.PAGE_EXECUTE_READWRITE, 
+                    -1,
+                    (nint)p,
+                    (uint)payload.Length,
+                    MemoryProtection.ExecuteReadWrite,
                     out var oldProtect
                 );
 
