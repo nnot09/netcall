@@ -7,6 +7,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO.Pipes;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.PortableExecutable;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -20,13 +21,12 @@ namespace netcall
     internal class ImportStub
     {
         [SuppressUnmanagedCodeSecurity]
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ASMCallgate();
 
-        public List<NtApi> ImportedAPIs { get; set; } = new List<NtApi>();
         public long MappedNtdllSize = 0;
 
-        public bool Import(string[] ntApiNames)
+        public bool Import(NTAPICollection collection)
         {
             string directory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
             string ntdll = Path.Combine(directory, "system32", "ntdll.dll");
@@ -44,22 +44,35 @@ namespace netcall
 
             if (mappedNtdll == IntPtr.Zero)
             {
-                Console.WriteLine("[!!!] Fatal: failed importing stubs.");
+                Console.WriteLine("[!!!] import failed.");
                 return false;
             }
 
             using PEUtils pe = new PEUtils(mappedNtdll);
 
-            foreach (string apiName in ntApiNames)
-            {
-                var api = pe.ResolveAPIExportAddress(apiName);
+            Console.WriteLine("[+] resolving APIs...");
 
-                if (api != null)
-                    this.ImportedAPIs.Add(api);
+            foreach (var api in collection)
+            {
+                api.Address = pe.ResolveAPIExportAddress(api.Name);
+
+                if (api.Address != IntPtr.Zero)
+                {
+                    api.Size = pe.CalculateStubSize(api.Address);
+                    api.Success = true;
+                }
             }
 
+            Console.WriteLine("[+] resolve complete.");
+
             // Create space 
-            int requiredSize = this.ImportedAPIs.Sum(api => api.Size);
+            var successfulCollection = collection
+                .Where(i => i.Success);
+
+            int requiredSize = successfulCollection
+                .Sum(api => api.Size);
+
+            Console.WriteLine("[+] allocating execution environment...");
 
             IntPtr stubspace = Win32API.VirtualAlloc(
                 IntPtr.Zero,
@@ -70,20 +83,58 @@ namespace netcall
 
             if (stubspace == IntPtr.Zero)
             {
-                Console.WriteLine("[!!!] Fatal: failed allocating space of {0} bytes for {1} apis.", requiredSize, this.ImportedAPIs.Count);
+                Console.WriteLine("[!!!] allocation failed: {0} bytes for {1} apis.", 
+                    requiredSize, 
+                    successfulCollection.Count()
+                );
+
                 return false;
             }
 
-            Console.WriteLine("Created space at 0x{0:x2}", stubspace);
+            Console.WriteLine("[+] allocation success: 0x{0:x2} ({1} bytes)", 
+                stubspace, 
+                requiredSize
+            );
 
-            foreach (var stub in ImportedAPIs)
+            Console.WriteLine("[+] copying stubs...");
+
+            foreach (var stub in successfulCollection)
+            {
                 CopyStub(stubspace, stub);
+
+                var t = stub.GetType();
+
+                var method = t.GetMethod("SetMethod");
+
+                method.Invoke(stub, null);
+            }
+
+            Console.WriteLine("[+] copy success.");
+            Console.WriteLine("[+] unmapping ntdll...");
+
+            if (!Win32API.UnmapViewOfFile(mappedNtdll))
+            {
+                var lastErr = Marshal.GetLastWin32Error();
+
+                Console.WriteLine("[!!!] unmap at address 0x{0:x2} failed: {1}",
+                    mappedNtdll,
+                    lastErr
+                );
+            }
+            else
+            {
+                Console.WriteLine("[+] unmap success.");
+            }
+
+            Console.WriteLine("[+] success: {0} API set-up and ready to use.", successfulCollection.Count());
 
             return true;
         }
 
         private IntPtr MapInternal(string modulePath)
         {
+            Console.WriteLine("[+] mapping ntdll...");
+
             SafeFileHandle sf = File.OpenHandle(
                 modulePath,
                 FileMode.Open,
@@ -94,7 +145,7 @@ namespace netcall
 
             if (sf.IsInvalid)
             {
-                Console.WriteLine("[!!!] Failed to create handle: {0}", modulePath);
+                Console.WriteLine("[!!!] failed to create handle: {0}", modulePath);
                 return IntPtr.Zero;
             }
 
@@ -113,7 +164,7 @@ namespace netcall
             {
                 sf.Close();
 
-                Console.WriteLine("[!!!] Failed to create file mapping for ntdll.");
+                Console.WriteLine("[!!!] failed to create file mapping for ntdll.");
 
                 return IntPtr.Zero;
             }
@@ -131,27 +182,34 @@ namespace netcall
 
             if (address == nint.Zero)
             {
-                Console.WriteLine("[!!!] Failed to map ntdll");
+                Console.WriteLine("[!!!] failed to map ntdll");
 
                 return IntPtr.Zero;
             }
 
-            Console.WriteLine("Mapped ntdll at 0x{0:x2}", address);
+            Console.WriteLine("[+] map success: 0x{0:x2}", address);
 
             return address;
         }
 
-        private IntPtr CopyStub(IntPtr space, NtApi api)
+        private IntPtr CopyStub(IntPtr space, INTAPI api)
         {
             bool requiresEdxFix = Environment.Is64BitOperatingSystem
                 && !Environment.Is64BitProcess;
 
+            api.SecureAddress = space;
+
             CopyMemory(space, api.Address, api.Size, requiresEdxFix);
+
+            Console.WriteLine("[>>] {0}!0x{1:x2}",
+                api.Name,
+                api.SecureAddress
+            );
 
             return IntPtr.Zero;
         }
 
-        // XDDDDDDDDDDDDDDDDDDDDDDDDD
+        // hahasha
         private unsafe int GetX86SwitchTo64Bitmode()
         {
             int ret;

@@ -34,27 +34,31 @@ namespace netcall
 
         public PEUtils(IntPtr baseAddress)
         {
+            Console.WriteLine("[+] initializing PE helper...");
+
             this.ImageBase = baseAddress;
 
             if (!TryInit(out var regionSize))
             {
-                Console.WriteLine("[!!!] Initialization failed (1).");
+                Console.WriteLine("[!!!] initialization failed (1).");
                 return;
             }
 
             if (!TryReadPE(regionSize))
             {
-                Console.WriteLine("[!!!] Initialization failed (2).");
+                Console.WriteLine("[!!!] initialization failed (2).");
                 return;
             }
 
             if (!TryReadInitials())
             {
-                Console.WriteLine("[!!!] Initalization failed (3).");
+                Console.WriteLine("[!!!] initalization failed (3).");
                 return;
             }
 
             this.IsInitialized = true;
+
+            Console.WriteLine("[+] initialized");
         }
 
         private bool TryInit(out nint regionSize)
@@ -94,7 +98,7 @@ namespace netcall
 
                 if (!pe.IsEntireImageAvailable)
                 {
-                    Console.WriteLine("[!!!] Failed to read PE image.");
+                    Console.WriteLine("[!!!] failed to read PE image.");
                     return false;
                 }
             }
@@ -107,7 +111,7 @@ namespace netcall
 
             if (!pe.PEHeaders.TryGetDirectoryOffset(export, out var exportOffset))
             {
-                Console.WriteLine("[!!!] Failed to get export offset");
+                Console.WriteLine("[!!!] failed to get export offset");
                 return false;
             }
 
@@ -119,7 +123,7 @@ namespace netcall
 
                 if (expdir->Base <= 0)
                 {
-                    Console.WriteLine("[!!!] Invalid export directory.");
+                    Console.WriteLine("[!!!] invalid export directory.");
                     return false;
                 }
 
@@ -138,7 +142,7 @@ namespace netcall
 
             return true;
         }
-        private int CalculateStubSize(IntPtr address)
+        public int CalculateStubSize(IntPtr address)
         {
             IntPtr start = address;
             IntPtr end = address;
@@ -194,12 +198,12 @@ namespace netcall
 
             return section.PointerToRawData + relativeOffset;
         }
-        public NtApi? ResolveAPIExportAddress(string name)
+        public IntPtr ResolveAPIExportAddress(string name)
         {
             if (!this.IsInitialized)
             {
-                Console.WriteLine("[!!!] Resolve cancelled: PE not (fully) initialized.");
-                return null;
+                Console.WriteLine("[!!!] resolve cancelled: PE not (fully) initialized.");
+                return IntPtr.Zero;
             }
 
             unsafe
@@ -211,8 +215,8 @@ namespace netcall
 
                     if (ordinal >= expdir->NumberOfFunctions)
                     {
-                        Console.WriteLine("[!!!] Invalid ordinal for API '{0}'", name);
-                        return null;
+                        Console.WriteLine("[!!!] invalid ordinal for API '{0}'", name);
+                        return IntPtr.Zero;
                     }
 
                     // var func = Marshal.ReadInt32(functionsTable, ordinal);
@@ -240,22 +244,15 @@ namespace netcall
 
                             IntPtr exportedAddress = this.ImageBase + exportedApiAddressOffset;
 
-                            Console.WriteLine("Found '{0}' at 0x{1:x2}", name, exportedAddress);
-
-                            return new NtApi()
-                            {
-                                Name = name,
-                                Address = exportedAddress,
-                                Size = CalculateStubSize(exportedAddress)
-                            };
+                            return exportedAddress;
                         }
                     }
                 }
             }
 
-            Console.WriteLine("API '{0}' was not found.", name);
+            Console.WriteLine("[!!!] resolve fail: API '{0}' was not found.", name);
 
-            return null;
+            return IntPtr.Zero;
         }
         public void Dispose()
         {
