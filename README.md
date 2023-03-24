@@ -1,4 +1,4 @@
-# netcall (WIP)
+# netcall
 
 netcall is (probably) your (most) friendly library to execute manual syscalls from .NET
 
