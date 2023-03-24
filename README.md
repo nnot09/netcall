@@ -2,7 +2,14 @@
 
 netcall is (probably) your (most) friendly library to execute manual syscalls from .NET
 
-### Few Notes
+### How does it work? 
+netcall is simply mapping a second copy of ntdll into your virtual space, resolving forwarded exports to find your APIs, allocate an extra execution space (RWX) and copy your NT function stubs into there and finally unmap ntdll again. During that process your defined delegates will get referenced to the corresponding function stub. 
+
+### Benefits
+* Bypass basic usermode hooks
+* No heavy extra code required
+
+### Few more Notes
 * Supports x86/wow64/x64
 * Very easy-to-use wrapper
 * Tested on Windows 10 x64 22H2
@@ -67,5 +74,12 @@ if (import.Import(apiCollection))
 }
 ```
 
+
 It's that easy, isn't it?
 
+ToDo: 
+* Encryption/Decryption "On The Fly" when executing a custom NT stub.
+* Region Protect/Unprotect "On The Fly" when executing a custom NT stub.
+* Overall optimization
+* Option to release all resources
+* Hook detection and stub restoration
