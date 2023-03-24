@@ -65,6 +65,7 @@ if (import.Import(apiCollection))
 
     NtClose(nativeHandle);
 }
+```
 
 It's that easy, isn't it?
 
