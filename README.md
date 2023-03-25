@@ -58,7 +58,7 @@ netcall.EnsureIntegrity();
 ```
 Restores altered memory fully. 
 
-![](https://i.gyazo.com/6626369b1bb11486ae70626d0fcd3c2a.gif)
+![alt gif](https://i.gyazo.com/6626369b1bb11486ae70626d0fcd3c2a.gif)
 
 #### Now all together.
 ```c#            
@@ -83,6 +83,17 @@ if (netcall.Import(apiCollection))
 ```
 
 It's that easy, isn't it?
+
+### Console
+Console output is also beautified and colorful:
+
+![alt pic](https://i.gyazo.com/c8f9347e52549f1797437f53d40be902.png)
+
+You don't like that? Just disable before using netcall, very at the beginning of your Program.cs:
+```c#
+ConsoleEx.DisableLogging();
+```
+
 
 ToDo: 
 * Overall optimization
