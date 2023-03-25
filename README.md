@@ -78,8 +78,6 @@ if (import.Import(apiCollection))
 It's that easy, isn't it?
 
 ToDo: 
-* Encryption/Decryption "On The Fly" when executing a custom NT stub.
-* Region Protect/Unprotect "On The Fly" when executing a custom NT stub.
 * Overall optimization
 * Option to release all resources
 * Hook detection and stub restoration
