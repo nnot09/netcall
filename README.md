@@ -35,9 +35,9 @@ apiCollection.AddAPI<SyscallStub.NtClose>("NtClose");
 
 #### 3. Create a new instance of ImportStub and import your APIs
 ```c#
-ImportStub import = new ImportStub();
+Netcall netcall = new Netcall();
 
-if (import.Import(apiCollection))
+if (netcall.Import(apiCollection))
 {
     // Do something here.
 }
@@ -52,7 +52,13 @@ var NtClose = apiCollection.GetFunction<SyscallStub.NtClose>();
 ```c#
 NtClose(nativeHandle);
 ```
+### 6. Check for integrity of your function stubs if you want to.
+```c#
+netcall.EnsureIntegrity();
+```
+Restores altered memory fully. 
 
+![](https://i.gyazo.com/6626369b1bb11486ae70626d0fcd3c2a.gif)
 
 #### Now all together.
 ```c#            
@@ -60,9 +66,9 @@ NTAPICollection apiCollection = new NTAPICollection();
 
 apiCollection.AddAPI<SyscallStub.NtClose>("NtClose");
 
-ImportStub import = new ImportStub();
+Netcall netcall = new Netcall();
 
-if (import.Import(apiCollection))
+if (netcall.Import(apiCollection))
 {
     var handle = File.OpenHandle(@"C:\Users\Developer\Desktop\test.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
 
@@ -71,13 +77,12 @@ if (import.Import(apiCollection))
     var NtClose = apiCollection.GetFunction<SyscallStub.NtClose>();
 
     NtClose(nativeHandle);
+    
+    netcall.Release();
 }
 ```
-
 
 It's that easy, isn't it?
 
 ToDo: 
 * Overall optimization
-* Option to release all resources
-* Hook detection and stub restoration
