@@ -33,7 +33,7 @@ NTAPICollection apiCollection = new NTAPICollection();
 apiCollection.AddAPI<SyscallStub.NtClose>("NtClose");
 ```
 
-#### 3. Create a new instance of ImportStub and import your APIs
+#### 3. Create a new instance of Netcall and import your APIs
 ```c#
 Netcall netcall = new Netcall();
 
