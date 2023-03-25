@@ -52,7 +52,7 @@ var NtClose = apiCollection.GetFunction<SyscallStub.NtClose>();
 ```c#
 NtClose(nativeHandle);
 ```
-### 6. Check for integrity of your function stubs if you want to.
+#### 6. Check for integrity of your function stubs if you want to.
 ```c#
 netcall.EnsureIntegrity();
 ```
