@@ -63,5 +63,13 @@ namespace netcall.Win32
             MemoryProtection flNewProtect,
             out MemoryProtection lpflOldProtect
         );
+
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        public static extern bool VirtualFreeEx(
+            IntPtr hProcess, 
+            IntPtr lpAddress,
+            int dwSize, 
+            FreeType dwFreeType
+        );
     }
 }

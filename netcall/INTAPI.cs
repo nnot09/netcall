@@ -14,5 +14,6 @@ namespace netcall
         IntPtr SecureAddress { get; set; }
         int Size { get; set; }
         Type Type { get; set; }
+        byte[] Restore { get; set; }
     }
 }

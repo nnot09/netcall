@@ -18,16 +18,19 @@ using static System.Collections.Specialized.BitVector32;
 
 namespace netcall
 {
-    internal class ImportStub
+    internal class Netcall
     {
         [SuppressUnmanagedCodeSecurity]
         [UnmanagedFunctionPointer(CallingConvention.Winapi)]
         private delegate int ASMCallgate();
 
-        public long MappedNtdllSize = 0;
+        private IntPtr _executionSpace;
+        private NTAPICollection _collection;
 
         public bool Import(NTAPICollection collection)
         {
+            this._collection = collection;
+
             string directory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
             string ntdll = Path.Combine(directory, "system32", "ntdll.dll");
 
@@ -59,6 +62,7 @@ namespace netcall
                 if (api.Address != IntPtr.Zero)
                 {
                     api.Size = pe.CalculateStubSize(api.Address);
+                    api.Restore = new byte[api.Size];
                     api.Success = true;
                 }
             }
@@ -83,16 +87,18 @@ namespace netcall
 
             if (stubspace == IntPtr.Zero)
             {
-                Console.WriteLine("[!!!] allocation failed: {0} bytes for {1} apis.", 
-                    requiredSize, 
+                Console.WriteLine("[!!!] allocation failed: {0} bytes for {1} apis.",
+                    requiredSize,
                     successfulCollection.Count()
                 );
 
                 return false;
             }
 
-            Console.WriteLine("[+] allocation success: 0x{0:x2} ({1} bytes)", 
-                stubspace, 
+            this._executionSpace = stubspace;
+
+            Console.WriteLine("[+] allocation success: 0x{0:x2} ({1} bytes)",
+                stubspace,
                 requiredSize
             );
 
@@ -149,8 +155,6 @@ namespace netcall
                 return IntPtr.Zero;
             }
 
-            MappedNtdllSize = new FileInfo(modulePath).Length;
-
             nint hMap = Win32API.CreateFileMapping(
                 sf.DangerousGetHandle(),
                 nint.Zero,
@@ -205,6 +209,10 @@ namespace netcall
                 api.Name,
                 api.SecureAddress
             );
+
+            Marshal.Copy(api.SecureAddress, api.Restore, 0, api.Size);
+
+            Crypt.Shared.Xor(api.Restore);
 
             return IntPtr.Zero;
         }
@@ -282,6 +290,90 @@ namespace netcall
             }
 
             offset += size;
+        }
+
+        public void EnsureIntegrity()
+        {
+            Console.WriteLine("[+] checking integrity...");
+
+            foreach (var api in this._collection.Where(api => api.Success))
+            {
+                if (IsAltered(api))
+                {
+                    Console.WriteLine("[*] modification detected at {0}!0x{1:x2}",
+                        api.Name,
+                        api.SecureAddress
+                    );
+
+                    this.Restore(api);
+                }
+
+                //if ( HasInlineHook(api.SecureAddress) )
+                //{
+                //    Console.WriteLine("[*] inline hook detected at {0}!0x{1:x2}", 
+                //        api.Name, 
+                //        api.SecureAddress
+                //    );
+                //}
+            }
+
+            Console.WriteLine("[+] integrity check completed.");
+        }
+
+        private bool HasInlineHook(IntPtr address) =>
+            Marshal.ReadByte(address) == 0xE9;
+
+        private bool IsAltered(INTAPI api)
+        {
+            byte[] stub = new byte[api.Size];
+
+            Marshal.Copy(api.SecureAddress, stub, 0, api.Size);
+
+            Crypt.Shared.Xor(stub);
+
+            for (int i = 0; i < api.Size; i++)
+            {
+                if (stub[i] != api.Restore[i])
+                    return true;
+            }
+
+            return false;
+        }
+
+        private void Restore(INTAPI api)
+        {
+            Console.WriteLine("[*] restoring {0}!0x{1:x2}",
+                api.Name,
+                api.SecureAddress
+            );
+
+            Win32API.VirtualProtectEx(
+                Process.GetCurrentProcess().Handle,
+                api.SecureAddress,
+                (nuint)api.Size,
+                MemoryProtection.ExecuteReadWrite,
+                out _
+            );
+
+            Crypt.Shared.Xor(api.Restore);
+
+            for (int i = 0; i < api.Size; i++)
+                Marshal.WriteByte(api.SecureAddress, i, api.Restore[i]);
+
+            Crypt.Shared.Xor(api.Restore);
+        }
+
+        public void Release()
+        {
+            bool free = Win32API.VirtualFreeEx(
+                Process.GetCurrentProcess().Handle,
+                this._executionSpace,
+                0,
+                FreeType.Release
+            );
+
+            if (free)
+                Console.WriteLine("[+] netcall stubs released.");
         }
     }
 }

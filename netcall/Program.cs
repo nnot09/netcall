@@ -8,14 +8,16 @@ namespace netcall
     {
         static void Main(string[] args)
         {
-            ImportStub import = new ImportStub();
-
             NTAPICollection apiCollection = new NTAPICollection();
 
             apiCollection.AddAPI<SyscallStub.NtClose>("NtClose");
 
-            if (import.Import(apiCollection))
+            Netcall netcall = new Netcall();
+
+            if (netcall.Import(apiCollection))
             {
+                netcall.EnsureIntegrity();
+
                 var handle = File.OpenHandle(@"C:\Users\Developer\Desktop\test.txt", FileMode.Open, FileAccess.Read, FileShare.Read);
 
                 var nativeHandle = handle.DangerousGetHandle();
@@ -23,6 +25,8 @@ namespace netcall
                 var NtClose = apiCollection.GetFunction<SyscallStub.NtClose>();
 
                 NtClose(nativeHandle);
+
+                netcall.Release();
             }
 
             Console.Read();

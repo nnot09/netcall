@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace netcall
 {
-    internal class NtApi<T> : INTAPI
+    internal class NtApi<T> : INTAPI 
     {
         public bool Success { get; set; }
         public string Name { get; set; }
@@ -16,6 +16,7 @@ namespace netcall
         public int Size { get; set; }
         public T Function { get; set; }
         public Type Type { get; set; }
+        public byte[] Restore { get; set; }
 
         /// <summary>
         /// Internal use. Will get invoked later through reflection.
