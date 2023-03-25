@@ -1,17 +1,8 @@
 ﻿using netcall.Win32.Structs;
 using netcall.Win32;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using System.IO;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.Globalization;
 
 namespace netcall
 {

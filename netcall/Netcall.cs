@@ -1,20 +1,8 @@
 ﻿using Microsoft.Win32.SafeHandles;
 using netcall.Win32;
-using netcall.Win32.Structs;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
-using System.IO.Pipes;
-using System.Linq;
-using System.Reflection;
-using System.Reflection.PortableExecutable;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
 
 namespace netcall
 {

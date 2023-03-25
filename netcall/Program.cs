@@ -1,8 +1,4 @@
-﻿using System.Diagnostics;
-using System.Reflection.Emit;
-using System.Runtime.InteropServices;
-
-namespace netcall
+﻿namespace netcall
 {
     internal class Program
     {
