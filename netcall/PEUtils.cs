@@ -34,31 +34,31 @@ namespace netcall
 
         public PEUtils(IntPtr baseAddress)
         {
-            Console.WriteLine("[+] initializing PE helper...");
+            ConsoleEx.WriteLine("initializing PE helper...");
 
             this.ImageBase = baseAddress;
 
             if (!TryInit(out var regionSize))
             {
-                Console.WriteLine("[!!!] initialization failed (1).");
+                ConsoleEx.WriteLine(ConsoleState.Failed,"initialization failed (1).");
                 return;
             }
 
             if (!TryReadPE(regionSize))
             {
-                Console.WriteLine("[!!!] initialization failed (2).");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "initialization failed (2).");
                 return;
             }
 
             if (!TryReadInitials())
             {
-                Console.WriteLine("[!!!] initalization failed (3).");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "initalization failed (3).");
                 return;
             }
 
             this.IsInitialized = true;
 
-            Console.WriteLine("[+] initialized");
+            ConsoleEx.WriteLine(ConsoleState.Success, "initialized");
         }
 
         private bool TryInit(out nint regionSize)
@@ -82,7 +82,7 @@ namespace netcall
 
             if (querySuccess == 0)
             {
-                Console.WriteLine("[!!!] VirtualQuery failed at 0x{0:x2}");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "VirtualQuery failed at 0x{0:x2}");
                 return false;
             }
 
@@ -98,7 +98,7 @@ namespace netcall
 
                 if (!pe.IsEntireImageAvailable)
                 {
-                    Console.WriteLine("[!!!] failed to read PE image.");
+                    ConsoleEx.WriteLine(ConsoleState.Failed, "failed to read PE image.");
                     return false;
                 }
             }
@@ -111,7 +111,7 @@ namespace netcall
 
             if (!pe.PEHeaders.TryGetDirectoryOffset(export, out var exportOffset))
             {
-                Console.WriteLine("[!!!] failed to get export offset");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "failed to get export offset");
                 return false;
             }
 
@@ -123,7 +123,7 @@ namespace netcall
 
                 if (expdir->Base <= 0)
                 {
-                    Console.WriteLine("[!!!] invalid export directory.");
+                    ConsoleEx.WriteLine(ConsoleState.Failed, "invalid export directory.");
                     return false;
                 }
 
@@ -202,7 +202,7 @@ namespace netcall
         {
             if (!this.IsInitialized)
             {
-                Console.WriteLine("[!!!] resolve cancelled: PE not (fully) initialized.");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "resolve cancelled: PE not (fully) initialized.");
                 return IntPtr.Zero;
             }
 
@@ -215,7 +215,7 @@ namespace netcall
 
                     if (ordinal >= expdir->NumberOfFunctions)
                     {
-                        Console.WriteLine("[!!!] invalid ordinal for API '{0}'", name);
+                        ConsoleEx.WriteLine(ConsoleState.Failed, "invalid ordinal for API '{0}'", name);
                         return IntPtr.Zero;
                     }
 
@@ -250,7 +250,7 @@ namespace netcall
                 }
             }
 
-            Console.WriteLine("[!!!] resolve fail: API '{0}' was not found.", name);
+            ConsoleEx.WriteLine(ConsoleState.Alert, "resolve fail: API '{0}' was not found.", name);
 
             return IntPtr.Zero;
         }

@@ -47,13 +47,13 @@ namespace netcall
 
             if (mappedNtdll == IntPtr.Zero)
             {
-                Console.WriteLine("[!!!] import failed.");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "import failed.");
                 return false;
             }
 
             using PEUtils pe = new PEUtils(mappedNtdll);
 
-            Console.WriteLine("[+] resolving APIs...");
+            ConsoleEx.WriteLine("resolving APIs...");
 
             foreach (var api in collection)
             {
@@ -67,7 +67,7 @@ namespace netcall
                 }
             }
 
-            Console.WriteLine("[+] resolve complete.");
+            ConsoleEx.WriteLine(ConsoleState.Success, "resolve complete.");
 
             // Create space 
             var successfulCollection = collection
@@ -76,7 +76,7 @@ namespace netcall
             int requiredSize = successfulCollection
                 .Sum(api => api.Size);
 
-            Console.WriteLine("[+] allocating execution environment...");
+            ConsoleEx.WriteLine("allocating execution environment...");
 
             IntPtr stubspace = Win32API.VirtualAlloc(
                 IntPtr.Zero,
@@ -87,7 +87,7 @@ namespace netcall
 
             if (stubspace == IntPtr.Zero)
             {
-                Console.WriteLine("[!!!] allocation failed: {0} bytes for {1} apis.",
+                ConsoleEx.WriteLine(ConsoleState.Failed,"allocation failed: {0} bytes for {1} apis.",
                     requiredSize,
                     successfulCollection.Count()
                 );
@@ -97,12 +97,12 @@ namespace netcall
 
             this._executionSpace = stubspace;
 
-            Console.WriteLine("[+] allocation success: 0x{0:x2} ({1} bytes)",
+            ConsoleEx.WriteLine(ConsoleState.Success, "allocation success: 0x{0:x2} ({1} bytes)",
                 stubspace,
                 requiredSize
             );
 
-            Console.WriteLine("[+] copying stubs...");
+            ConsoleEx.WriteLine("copying stubs...");
 
             foreach (var stub in successfulCollection)
             {
@@ -115,31 +115,31 @@ namespace netcall
                 method.Invoke(stub, null);
             }
 
-            Console.WriteLine("[+] copy success.");
-            Console.WriteLine("[+] unmapping ntdll...");
+            ConsoleEx.WriteLine(ConsoleState.Success, "copy success.");
+            ConsoleEx.WriteLine("unmapping ntdll...");
 
             if (!Win32API.UnmapViewOfFile(mappedNtdll))
             {
                 var lastErr = Marshal.GetLastWin32Error();
 
-                Console.WriteLine("[!!!] unmap at address 0x{0:x2} failed: {1}",
+                ConsoleEx.WriteLine(ConsoleState.Failed, "unmap at address 0x{0:x2} failed: {1}",
                     mappedNtdll,
                     lastErr
                 );
             }
             else
             {
-                Console.WriteLine("[+] unmap success.");
+                ConsoleEx.WriteLine(ConsoleState.Success, "unmap success.");
             }
 
-            Console.WriteLine("[+] success: {0} API set-up and ready to use.", successfulCollection.Count());
+            ConsoleEx.WriteLine(ConsoleState.Success, "success: {0} API set-up and ready to use.", successfulCollection.Count());
 
             return true;
         }
 
         private IntPtr MapInternal(string modulePath)
         {
-            Console.WriteLine("[+] mapping ntdll...");
+            ConsoleEx.WriteLine("mapping ntdll...");
 
             SafeFileHandle sf = File.OpenHandle(
                 modulePath,
@@ -151,7 +151,7 @@ namespace netcall
 
             if (sf.IsInvalid)
             {
-                Console.WriteLine("[!!!] failed to create handle: {0}", modulePath);
+                ConsoleEx.WriteLine(ConsoleState.Failed, "failed to create handle: {0}", modulePath);
                 return IntPtr.Zero;
             }
 
@@ -168,7 +168,7 @@ namespace netcall
             {
                 sf.Close();
 
-                Console.WriteLine("[!!!] failed to create file mapping for ntdll.");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "failed to create file mapping for ntdll.");
 
                 return IntPtr.Zero;
             }
@@ -186,12 +186,12 @@ namespace netcall
 
             if (address == nint.Zero)
             {
-                Console.WriteLine("[!!!] failed to map ntdll");
+                ConsoleEx.WriteLine(ConsoleState.Failed, "failed to map ntdll");
 
                 return IntPtr.Zero;
             }
 
-            Console.WriteLine("[+] map success: 0x{0:x2}", address);
+            ConsoleEx.WriteLine(ConsoleState.Success, "map success: 0x{0:x2}", address);
 
             return address;
         }
@@ -205,7 +205,7 @@ namespace netcall
 
             CopyMemory(space, api.Address, api.Size, requiresEdxFix);
 
-            Console.WriteLine("[>>] {0}!0x{1:x2}",
+            ConsoleEx.WriteLine(ConsoleState.Action, "{0}!0x{1:x2}",
                 api.Name,
                 api.SecureAddress
             );
@@ -294,13 +294,13 @@ namespace netcall
 
         public void EnsureIntegrity()
         {
-            Console.WriteLine("[+] checking integrity...");
+            ConsoleEx.WriteLine("checking integrity...");
 
             foreach (var api in this._collection.Where(api => api.Success))
             {
                 if (IsAltered(api))
                 {
-                    Console.WriteLine("[*] modification detected at {0}!0x{1:x2}",
+                    ConsoleEx.WriteLine(ConsoleState.Alert, "modification detected at {0}!0x{1:x2}",
                         api.Name,
                         api.SecureAddress
                     );
@@ -310,14 +310,14 @@ namespace netcall
 
                 //if ( HasInlineHook(api.SecureAddress) )
                 //{
-                //    Console.WriteLine("[*] inline hook detected at {0}!0x{1:x2}", 
+                //    ConsoleEx.WriteLine(ConsoleState.Alert, "inline hook detected at {0}!0x{1:x2}", 
                 //        api.Name, 
                 //        api.SecureAddress
                 //    );
                 //}
             }
 
-            Console.WriteLine("[+] integrity check completed.");
+            ConsoleEx.WriteLine(ConsoleState.Success, "integrity check completed.");
         }
 
         private bool HasInlineHook(IntPtr address) =>
@@ -342,7 +342,7 @@ namespace netcall
 
         private void Restore(INTAPI api)
         {
-            Console.WriteLine("[*] restoring {0}!0x{1:x2}",
+            ConsoleEx.WriteLine(ConsoleState.Action, "restoring {0}!0x{1:x2}",
                 api.Name,
                 api.SecureAddress
             );
@@ -373,7 +373,7 @@ namespace netcall
             );
 
             if (free)
-                Console.WriteLine("[+] netcall stubs released.");
+                ConsoleEx.WriteLine(ConsoleState.Success, "netcall stubs released.");
         }
     }
 }

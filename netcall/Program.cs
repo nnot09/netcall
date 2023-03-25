@@ -8,6 +8,8 @@ namespace netcall
     {
         static void Main(string[] args)
         {
+            ConsoleEx.DisableLogging();
+
             NTAPICollection apiCollection = new NTAPICollection();
 
             apiCollection.AddAPI<SyscallStub.NtClose>("NtClose");

@@ -28,7 +28,7 @@ namespace netcall
 
             if ( api == null )
             {
-                Console.WriteLine("[!!!] Function of type {0} not found.", type.Name);
+                ConsoleEx.WriteLine(ConsoleState.Failed, "function of type {0} not found.", type.Name);
                 return default;
             }
 
